@@ -1,0 +1,202 @@
+# Lambda Layer 設定ファイル
+# MAKOTO Visual AI 共通ライブラリLayer
+
+layer:
+  name: makoto-common-layer
+  description: MAKOTO Visual AI Common Library Layer
+  version: 1.0.0
+  
+  # 互換性のあるランタイム
+  compatible_runtimes:
+    - python3.11
+    - python3.10
+  
+  # ライセンス
+  license: Proprietary
+  
+  # メタデータ
+  metadata:
+    maintainer: MAKOTO Visual AI Team
+    repository: https://github.com/WhiteRabbit210/makoto-visual-ai
+    documentation: https://github.com/WhiteRabbit210/makoto-visual-ai/blob/main/docs/
+
+# ビルド設定
+build:
+  # ソースディレクトリ
+  source_dir: python
+  
+  # 出力ディレクトリ
+  output_dir: build
+  
+  # 依存関係ファイル
+  requirements_file: requirements.txt
+  
+  # 除外パターン
+  exclude_patterns:
+    - "*.pyc"
+    - "*.pyo"
+    - "__pycache__"
+    - "*.dist-info"
+    - "tests/"
+    - "test/"
+    - ".pytest_cache"
+    - ".coverage"
+    - "*.egg-info"
+  
+  # 最大サイズ（バイト）
+  max_size: 262144000  # 250MB
+
+# デプロイ設定
+deploy:
+  # 環境別設定
+  environments:
+    dev:
+      region: ap-northeast-1
+      layer_name_suffix: -dev
+      retention_count: 3  # 保持するバージョン数
+      permissions:
+        - principal: "*"
+          action: lambda:GetLayerVersion
+    
+    staging:
+      region: ap-northeast-1
+      layer_name_suffix: -staging
+      retention_count: 5
+      permissions:
+        - principal: "*"
+          action: lambda:GetLayerVersion
+    
+    prod:
+      region: ap-northeast-1
+      layer_name_suffix: -prod
+      retention_count: 10
+      permissions:
+        - principal: "arn:aws:iam::*:root"
+          action: lambda:GetLayerVersion
+  
+  # S3設定（大きなLayerの場合）
+  s3:
+    bucket_prefix: makoto-lambda-layers
+    key_prefix: layers/common
+    lifecycle_days: 7  # S3上のファイル保持期間
+
+# モジュール構成
+modules:
+  makoto_common:
+    description: MAKOTO共通ライブラリ
+    submodules:
+      - name: types
+        description: 型定義（primitives, entities, api）
+      - name: tenant
+        description: マルチテナント管理
+      - name: database
+        description: データベース抽象化（DynamoDB/CosmosDB）
+      - name: ai
+        description: AI標準化インターフェース
+      - name: events
+        description: イベント処理
+      - name: validators
+        description: バリデーター
+      - name: errors
+        description: エラー処理
+      - name: utils
+        description: ユーティリティ関数
+      - name: aws_clients
+        description: AWSクライアント管理
+
+# 依存パッケージ（主要なもの）
+dependencies:
+  core:
+    - boto3>=1.26.0
+    - pydantic>=2.4.0
+    - python-dateutil>=2.8.0
+    - pytz>=2023.3
+  
+  database:
+    - azure-cosmos>=4.5.0
+  
+  ai:
+    - openai>=1.3.0
+    - anthropic>=0.8.0
+    - tiktoken>=0.5.0
+  
+  http:
+    - aiohttp>=3.9.0
+    - httpx>=0.25.0
+    - requests>=2.31.0
+  
+  validation:
+    - jsonschema>=4.19.0
+    - email-validator>=2.1.0
+    - phonenumbers>=8.13.0
+  
+  security:
+    - cryptography>=41.0.0
+    - pyjwt>=2.8.0
+    - python-jose>=3.3.0
+
+# テスト設定
+testing:
+  framework: pytest
+  min_coverage: 80
+  test_directory: tests/
+  
+  # テスト環境
+  test_environments:
+    - local
+    - docker
+    - lambda
+
+# 監視設定
+monitoring:
+  metrics:
+    - layer_size
+    - deployment_frequency
+    - error_rate
+    - latency
+  
+  alarms:
+    - name: layer_size_exceeded
+      threshold: 200MB
+      action: notify
+    
+    - name: deployment_failed
+      threshold: 1
+      action: alert
+
+# ドキュメント
+documentation:
+  readme: README.md
+  api_docs: docs/api/
+  examples: examples/
+  changelog: CHANGELOG.md
+
+# CI/CD設定
+ci_cd:
+  pipeline: github_actions
+  
+  stages:
+    - name: test
+      commands:
+        - pytest tests/
+        - mypy makoto_common/
+    
+    - name: build
+      commands:
+        - ./build.sh
+    
+    - name: deploy
+      commands:
+        - ./deploy.sh $ENVIRONMENT
+      environments:
+        - dev
+        - staging
+        - prod
+  
+  triggers:
+    - branch: main
+      environment: prod
+    - branch: staging
+      environment: staging
+    - branch: develop
+      environment: dev
