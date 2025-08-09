@@ -1,0 +1,143 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # Lambda Layer テスト
+  test-lambda-layer:
+    name: Test Lambda Layer
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11']
+    
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v4
+      
+      - name: Python セットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: キャッシュ設定
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: 依存パッケージインストール
+        run: |
+          cd backend/layers
+          pip install -r common/requirements.txt
+          pip install -r tests/requirements-test.txt
+      
+      - name: Lint チェック
+        run: |
+          cd backend/layers
+          flake8 common/python/makoto_common --max-line-length=120
+        continue-on-error: true
+      
+      - name: 型チェック
+        run: |
+          cd backend/layers
+          mypy common/python/makoto_common --ignore-missing-imports
+        continue-on-error: true
+      
+      - name: ユニットテスト実行
+        run: |
+          cd backend/layers/tests
+          pytest -v --cov=makoto_common --cov-report=xml
+      
+      - name: カバレッジレポートアップロード
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./backend/layers/tests/coverage.xml
+          flags: lambda-layer
+          name: lambda-layer-coverage
+
+  # Lambda Layer ビルド
+  build-lambda-layer:
+    name: Build Lambda Layer
+    runs-on: ubuntu-latest
+    needs: test-lambda-layer
+    
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v4
+      
+      - name: Python セットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Layer ビルド
+        run: |
+          cd backend/layers/common
+          ./build.sh
+      
+      - name: アーティファクトアップロード
+        uses: actions/upload-artifact@v3
+        with:
+          name: lambda-layer
+          path: backend/layers/common/makoto-common-layer.zip
+          retention-days: 7
+
+  # セキュリティスキャン
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v4
+      
+      - name: Python セットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: 依存パッケージインストール
+        run: |
+          pip install bandit safety
+      
+      - name: Bandit スキャン
+        run: |
+          bandit -r backend/layers/common/python/makoto_common -ll
+        continue-on-error: true
+      
+      - name: Safety チェック
+        run: |
+          cd backend/layers/common
+          safety check -r requirements.txt
+        continue-on-error: true
+
+  # ドキュメント検証
+  validate-docs:
+    name: Validate Documentation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v4
+      
+      - name: Markdown リント
+        uses: DavidAnson/markdownlint-cli2-action@v13
+        with:
+          globs: |
+            docs/**/*.md
+            README.md
+        continue-on-error: true
+      
+      - name: リンクチェック
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          folder-path: 'docs/'
+        continue-on-error: true

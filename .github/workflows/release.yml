@@ -1,0 +1,48 @@
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'layer-v*'
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Python セットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Lambda Layer ビルド
+        if: startsWith(github.ref, 'refs/tags/layer-v')
+        run: |
+          cd backend/layers/common
+          ./build.sh
+      
+      - name: チェンジログ生成
+        id: changelog
+        run: |
+          echo "# リリースノート" > RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "## 変更内容" >> RELEASE_NOTES.md
+          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> RELEASE_NOTES.md
+      
+      - name: GitHub Release 作成
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            backend/layers/common/makoto-common-layer.zip
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
