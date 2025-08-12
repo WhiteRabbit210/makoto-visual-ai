@@ -1,0 +1,15 @@
+{
+  "test_date": "2025-08-12T23:10:54.531004",
+  "results": [
+    {
+      "test": "Create Library",
+      "status": "error",
+      "error": "Cannot connect to host localhost:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]"
+    },
+    {
+      "test": "Get Libraries",
+      "status": "error",
+      "error": "Cannot connect to host localhost:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]"
+    }
+  ]
+}

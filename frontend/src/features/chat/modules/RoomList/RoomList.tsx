@@ -20,7 +20,6 @@ interface RoomListProps {
   onLoadMore?: () => void;
   hasMore?: boolean;
   loadingMore?: boolean;
-  totalChats?: number;
 }
 
 export const RoomList: React.FC<RoomListProps> = ({
@@ -32,7 +31,6 @@ export const RoomList: React.FC<RoomListProps> = ({
   onLoadMore,
   hasMore = false,
   loadingMore = false,
-  totalChats = 0,
 }) => {
   console.log('RoomList render:', { chatsLength: chats.length, loadingMore });
   const [isEditMode, setIsEditMode] = useState(false);
@@ -125,8 +123,7 @@ export const RoomList: React.FC<RoomListProps> = ({
       {/* チャット合計数表示 */}
       <div className="border-t border-border p-3 bg-surface/50">
         <p className="text-sm text-text-muted text-center">
-          チャット: {totalChats}件
-          {chats.length < totalChats && ` (表示中: ${chats.length}件)`}
+          チャット: {chats.length}件
         </p>
       </div>
     </div>

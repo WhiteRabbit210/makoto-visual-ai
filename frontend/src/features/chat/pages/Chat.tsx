@@ -116,7 +116,6 @@ export const ChatPage: React.FC = () => {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [offset, setOffset] = useState(0);
-  const [totalChats, setTotalChats] = useState(0);
   const [isAgentThinking, setIsAgentThinking] = useState(false);
   const [agentAnalysisResult, setAgentAnalysisResult] = useState<AnalyzeResponse | null>(null);
   const [agentThinkingStatus, setAgentThinkingStatus] = useState<'analyzing' | 'searching' | 'crawling' | 'generating'>('analyzing');
@@ -149,7 +148,6 @@ export const ChatPage: React.FC = () => {
       
       setOffset(currentOffset + response.chats.length);
       setHasMore(response.has_more);
-      setTotalChats(response.total);
       
       // 最初のチャットを選択
       if (!loadMore && response.chats.length > 0 && !activeChat) {
@@ -168,17 +166,17 @@ export const ChatPage: React.FC = () => {
     }
   };
 
-  const handleChatSelect = async (chatId: string) => {
-    if (chatId === activeChat) return;
+  const handleChatSelect = async (roomId: string) => {
+    if (roomId === activeChat) return;
     
     setIsChangingChat(true);
     try {
-      await chatApi.getChat(chatId);
+      await chatApi.getChat(roomId);
       setTimeout(() => {
-        setActiveChat(chatId);
+        setActiveChat(roomId);
         // TODO: チャットのメッセージを別途取得する必要がある
         setMessages([]);
-        setCurrentChatId(chatId); // 既存のチャットIDを設定
+        setCurrentChatId(roomId); // 既存のチャットIDを設定
         setIsChangingChat(false);
       }, 150);
     } catch (error) {
@@ -198,12 +196,12 @@ export const ChatPage: React.FC = () => {
     }, 150);
   };
 
-  const handleDeleteChat = async (chatId: string) => {
+  const handleDeleteChat = async (roomId: string) => {
     if (window.confirm('このチャットを削除しますか？')) {
       try {
-        await chatApi.deleteChat(chatId);
-        setChats(chats.filter(chat => chat.room_id !== chatId));
-        if (activeChat === chatId) {
+        await chatApi.deleteChat(roomId);
+        setChats(chats.filter(chat => chat.room_id !== roomId));
+        if (activeChat === roomId) {
           setActiveChat(null);
           setMessages([]);
           setCurrentChatId(null);
@@ -457,14 +455,13 @@ export const ChatPage: React.FC = () => {
         onLoadMore={handleLoadMore}
         hasMore={hasMore}
         loadingMore={loadingMore}
-        totalChats={totalChats}
       />
 
       {/* Chat Area */}
       <div className="flex-1 flex flex-col bg-transparent">
         {/* Chat Header */}
         <ActiveChatHeader 
-          chatId={currentChatId || activeChat}
+          roomId={currentChatId || activeChat}
           chatTitle={chats.find(c => c.room_id === (currentChatId || activeChat))?.title}
         />
         

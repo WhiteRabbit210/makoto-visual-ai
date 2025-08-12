@@ -131,18 +131,15 @@ export interface GetChatsParams {
  */
 export interface GetChatsResponse {
   chats: ChatRoom[];
-  total: number;
-  page: number;
-  limit: number;
-  total_pages: number;
-  has_more: boolean;  // ページング用に追加
+  has_more: boolean;
+  next_key: string | null;
 }
 
 /**
  * チャット作成リクエスト
  */
 export interface CreateChatRequest {
-  chat_id?: UUID;
+  room_id?: UUID;
   message: string;
   active_modes?: ChatMode[];
 }

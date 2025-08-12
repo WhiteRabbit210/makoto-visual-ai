@@ -8,10 +8,11 @@ MAKOTO Visual AIのバックエンドAPIの構造と実装状況をまとめた�
 ### chat.py - チャット管理API
 
 #### 基本チャット機能
-- `GET /api/chats` - チャット一覧取得（ページネーション対応）
-- `GET /api/chats/{chat_id}` - 特定のチャット取得
-- `POST /api/chats` - 新規チャット作成または既存チャットへの追加
-- `DELETE /api/chats/{chat_id}` - チャット削除
+- `GET /api/chats` - チャット一覧取得（カーソルベースページネーション）
+  - パラメータ: `page_size`, `next_key`, `tenant_id`, `user_id`
+- `GET /api/chats/{room_id}` - 特定のチャット取得
+- `POST /api/chats` - 新規チャット作成またはメッセージ追加
+- `DELETE /api/chats/{room_id}` - チャット削除
 
 #### ChatGPT連携
 - `POST /api/chat/completion` - ChatGPT APIによる単一レスポンス生成
@@ -26,13 +27,32 @@ MAKOTO Visual AIのバックエンドAPIの構造と実装状況をまとめた�
   - レスポンス：生成された画像のURL配列
 
 ### library.py - ライブラリ管理API
+
+#### 現在の実装（アイテムベース）
+- `GET /api/library/items` - アイテム一覧取得
+  - パラメータ: `parent_id` (optional) - 親フォルダID
+- `GET /api/library/items/{item_id}` - 特定アイテム取得
+- `POST /api/library/folders` - フォルダ作成
+- `POST /api/library/upload` - ファイルアップロード
+  - multipart/form-data: `file`, `folder_id` (optional)
+- `DELETE /api/library/items/{item_id}` - アイテム削除
+
+#### 正しい設計（ライブラリベース - 要実装）
 - `GET /api/libraries` - ライブラリ一覧取得
-- `POST /api/libraries` - ライブラリ作成
 - `GET /api/libraries/{library_id}` - ライブラリ詳細取得
+- `POST /api/libraries` - ライブラリ作成
 - `PUT /api/libraries/{library_id}` - ライブラリ更新
 - `DELETE /api/libraries/{library_id}` - ライブラリ削除
 - `POST /api/libraries/{library_id}/files` - ファイルアップロード
+  - 対応形式: PDF, TXT, DOCX, XLSX, PPTX等
+  - アップロード後、自動的にエンベディング処理開始
 - `DELETE /api/libraries/{library_id}/files/{filename}` - ファイル削除
+  - 削除時、対応するエンベディングも削除
+- `GET /api/libraries/{library_id}/files/{filename}` - ファイルダウンロード
+- `GET /api/libraries/{library_id}/files/{filename}/text` - テキスト抽出
+- `POST /api/libraries/{library_id}/embeddings` - エンベディング開始
+- `GET /api/libraries/{library_id}/embeddings/status` - エンベディング状態確認
+- `POST /api/libraries/{library_id}/search` - ベクトル検索（RAG用）
 
 ### task.py - タスク管理API
 - `GET /api/tasks` - タスク一覧取得

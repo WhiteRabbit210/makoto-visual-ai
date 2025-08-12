@@ -31,8 +31,7 @@ class ImageGenerationService:
         prompt: str,
         n: int = 1,
         size: str = "1024x1024",
-        quality: str = "medium",
-        output_format: str = "url"
+        quality: str = "medium"
     ) -> Optional[Dict[str, any]]:
         """
         Azure OpenAI DALL-E 3を使用して画像を生成
@@ -41,8 +40,7 @@ class ImageGenerationService:
             prompt: 画像生成のプロンプト
             n: 生成する画像の数（DALL-E 3では1のみサポート）
             size: 画像サイズ（1024x1024, 1792x1024, 1024x1792）
-            quality: 画質（standard, hd）
-            output_format: 出力形式（url, b64_json）
+            quality: 画質（low, medium, high, auto）
             
         Returns:
             生成された画像情報の辞書、エラー時はNone
@@ -55,7 +53,7 @@ class ImageGenerationService:
         generation_url = self.endpoint
         
         headers = {
-            "Api-Key": self.api_key,
+            "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
         
@@ -64,7 +62,8 @@ class ImageGenerationService:
             "n": n,
             "size": size,
             "quality": quality,
-            "output_format": "png" if output_format == "url" else output_format
+            "output_format": "png",
+            "output_compression": 100
         }
         
         try:

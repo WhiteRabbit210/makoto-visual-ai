@@ -1,0 +1,15 @@
+{
+  "test_date": "2025-08-12T23:36:05.980949",
+  "results": [
+    {
+      "test": "Direct Image Generation",
+      "status": "error",
+      "error": "No module named 'services'"
+    },
+    {
+      "test": "Chat API with Image Mode",
+      "status": "failed",
+      "error": "Status 404: {\"detail\":\"Not Found\"}"
+    }
+  ]
+}

@@ -27,7 +27,7 @@ class KVMServiceBase(ABC):
         pass
     
     @abstractmethod
-    async def query(self, pk: str, sk_prefix: str = None, limit: int = 100, 
+    async def query(self, pk: str, sk_prefix: str = None, page_size: int = 100, 
                    scan_forward: bool = False) -> List[Dict[str, Any]]:
         """アイテムをクエリ"""
         pass
@@ -83,7 +83,7 @@ class DynamoDBService(KVMServiceBase):
             print(f"DynamoDB get_item error: {e}")
             return None
     
-    async def query(self, pk: str, sk_prefix: str = None, limit: int = 100, 
+    async def query(self, pk: str, sk_prefix: str = None, page_size: int = 100, 
                    scan_forward: bool = False) -> List[Dict[str, Any]]:
         """アイテムをクエリ"""
         try:
@@ -99,7 +99,7 @@ class DynamoDBService(KVMServiceBase):
                 lambda: self.table.query(
                     KeyConditionExpression=key_condition,
                     ScanIndexForward=scan_forward,
-                    Limit=limit
+                    Limit=page_size
                 )
             )
             return response.get('Items', [])
@@ -213,7 +213,7 @@ class CosmosDBService(KVMServiceBase):
             print(f"CosmosDB get_item error: {e}")
             return None
     
-    async def query(self, pk: str, sk_prefix: str = None, limit: int = 100, 
+    async def query(self, pk: str, sk_prefix: str = None, page_size: int = 100, 
                    scan_forward: bool = False) -> List[Dict[str, Any]]:
         """アイテムをクエリ"""
         try:
@@ -237,7 +237,7 @@ class CosmosDBService(KVMServiceBase):
                 lambda: list(self.container.query_items(
                     query=query,
                     parameters=parameters,
-                    max_item_count=limit
+                    max_item_count=page_size
                 ))
             )
             return items
@@ -290,62 +290,108 @@ class CosmosDBService(KVMServiceBase):
             return {'success': False, 'error': str(e)}
 
 
-class MockKVMService(KVMServiceBase):
-    """開発/テスト用のモックKVMサービス（メモリ内保存）"""
+class TinyDBKVMService(KVMServiceBase):
+    """開発環境用のTinyDB実装（ローカル永続化）"""
     
     def __init__(self):
-        self.data = {}
+        from tinydb import TinyDB, Query
+        from pathlib import Path
+        
+        # データディレクトリを作成
+        Path("data").mkdir(exist_ok=True)
+        
+        # TinyDBを初期化
+        self.db = TinyDB('data/kvm_tinydb.json')
+        self.Query = Query()
     
     async def put_item(self, item: Dict[str, Any]) -> Dict[str, Any]:
         """アイテムを保存"""
-        key = f"{item['PK']}#{item['SK']}"
-        self.data[key] = item
+        # 既存のアイテムを検索
+        Query = self.Query
+        existing = self.db.search(
+            (Query.PK == item['PK']) & (Query.SK == item['SK'])
+        )
+        
+        if existing:
+            # 更新
+            self.db.update(
+                item,
+                (Query.PK == item['PK']) & (Query.SK == item['SK'])
+            )
+        else:
+            # 新規作成
+            self.db.insert(item)
+        
         return {'success': True, 'response': item}
     
     async def get_item(self, pk: str, sk: str) -> Optional[Dict[str, Any]]:
         """アイテムを取得"""
-        key = f"{pk}#{sk}"
-        return self.data.get(key)
+        Query = self.Query
+        results = self.db.search(
+            (Query.PK == pk) & (Query.SK == sk)
+        )
+        return results[0] if results else None
     
-    async def query(self, pk: str, sk_prefix: str = None, limit: int = 100, 
+    async def query(self, pk: str, sk_prefix: str = None, page_size: int = 100, 
                    scan_forward: bool = False) -> List[Dict[str, Any]]:
         """アイテムをクエリ"""
-        results = []
-        for key, item in self.data.items():
-            if item.get('PK') == pk:
-                if sk_prefix is None or item.get('SK', '').startswith(sk_prefix):
-                    results.append(item)
+        Query = self.Query
+        
+        if sk_prefix:
+            # SKプレフィックスでフィルタ
+            results = self.db.search(
+                (Query.PK == pk) & 
+                (Query.SK.matches(f'^{sk_prefix}.*'))
+            )
+        else:
+            # PKのみでフィルタ
+            results = self.db.search(Query.PK == pk)
         
         # ソート
         results.sort(key=lambda x: x.get('SK', ''), reverse=not scan_forward)
         
         # limit適用
-        return results[:limit]
+        return results[:page_size]
     
     async def update_item(self, pk: str, sk: str, updates: Dict[str, Any]) -> Dict[str, Any]:
         """アイテムを更新"""
-        key = f"{pk}#{sk}"
-        if key not in self.data:
+        Query = self.Query
+        
+        # 既存のアイテムを取得
+        existing = await self.get_item(pk, sk)
+        if not existing:
             return {'success': False, 'error': 'Item not found'}
         
-        item = self.data[key]
+        # 更新を適用
         for update_key, value in updates.items():
             if update_key == 'message_count' and isinstance(value, int):
                 # カウンターのインクリメント
-                item[update_key] = item.get(update_key, 0) + value
+                existing[update_key] = existing.get(update_key, 0) + value
             else:
-                item[update_key] = value
+                existing[update_key] = value
         
-        self.data[key] = item
-        return {'success': True, 'item': item}
+        # DBを更新
+        self.db.update(
+            existing,
+            (Query.PK == pk) & (Query.SK == sk)
+        )
+        
+        return {'success': True, 'item': existing}
     
     async def delete_item(self, pk: str, sk: str) -> Dict[str, Any]:
         """アイテムを削除"""
-        key = f"{pk}#{sk}"
-        if key in self.data:
-            del self.data[key]
-            return {'success': True}
-        return {'success': False, 'error': 'Item not found'}
+        Query = self.Query
+        
+        # アイテムの存在確認
+        if not await self.get_item(pk, sk):
+            return {'success': False, 'error': 'Item not found'}
+        
+        # 削除
+        self.db.remove(
+            (Query.PK == pk) & (Query.SK == sk)
+        )
+        
+        return {'success': True}
 
 
 # KVMサービスのシングルトンインスタンス
@@ -358,8 +404,8 @@ def get_kvm_service() -> KVMServiceBase:
     elif kvm_type == 'cosmosdb':
         return CosmosDBService()
     else:
-        # 開発環境ではモックを使用
-        return MockKVMService()
+        # 開発環境ではTinyDBを使用（永続化）
+        return TinyDBKVMService()
 
 
 # グローバルインスタンス

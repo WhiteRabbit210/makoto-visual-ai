@@ -1,0 +1,23 @@
+{
+  "test_date": "2025-08-12T23:43:08.445049",
+  "results": [
+    {
+      "test": "Direct Image Generation",
+      "status": "success",
+      "images": [
+        {
+          "url": "/uploads/generated_images/日本の富士山の美しい夕焼け、浮世絵風のイラスト_0_18042bef-5bb3-4078-aaa8-9284e51f79ab.png",
+          "file_path": "uploads/generated_images/日本の富士山の美しい夕焼け、浮世絵風のイラスト_0_18042bef-5bb3-4078-aaa8-9284e51f79ab.png",
+          "filename": "日本の富士山の美しい夕焼け、浮世絵風のイラスト_0_18042bef-5bb3-4078-aaa8-9284e51f79ab.png",
+          "created_at": "2025-08-12T23:43:08.438903"
+        }
+      ],
+      "prompt": "日本の富士山の美しい夕焼け、浮世絵風のイラスト"
+    },
+    {
+      "test": "Chat API with Image Mode",
+      "status": "failed",
+      "error": "Status 404: {\"detail\":\"Not Found\"}"
+    }
+  ]
+}

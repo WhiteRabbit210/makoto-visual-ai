@@ -3,22 +3,22 @@ import { MessageSquare, Copy, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface ActiveChatHeaderProps {
-  chatId: string | null;
+  roomId: string | null;
   chatTitle?: string;
 }
 
-export const ActiveChatHeader: React.FC<ActiveChatHeaderProps> = ({ chatId, chatTitle }) => {
+export const ActiveChatHeader: React.FC<ActiveChatHeaderProps> = ({ roomId, chatTitle }) => {
   const [copied, setCopied] = React.useState(false);
 
   const handleCopyId = () => {
-    if (chatId) {
-      navigator.clipboard.writeText(chatId);
+    if (roomId) {
+      navigator.clipboard.writeText(roomId);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
-  if (!chatId) {
+  if (!roomId) {
     return (
       <div className="h-14 border-b border-border flex items-center px-4">
         <div className="flex items-center gap-3 text-text-muted">
@@ -44,7 +44,7 @@ export const ActiveChatHeader: React.FC<ActiveChatHeaderProps> = ({ chatId, chat
           </h2>
           <div className="flex items-center gap-2">
             <p className="text-xs text-text-muted font-mono">
-              ID: {chatId.slice(0, 8)}...{chatId.slice(-4)}
+              ID: {roomId.slice(0, 8)}...{roomId.slice(-4)}
             </p>
             <button
               onClick={handleCopyId}

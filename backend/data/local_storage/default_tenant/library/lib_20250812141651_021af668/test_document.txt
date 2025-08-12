@@ -1,0 +1,9 @@
+{
+  "content": "これはテスト用のテキストファイルです。\nライブラリAPIのファイルアップロード機能をテストしています。\n日本語の内容も正しく処理されることを確認します。\n\nテストデータ:\n- 項目1: テストデータA\n- 項目2: テストデータB\n- 項目3: テストデータC\n",
+  "metadata": {
+    "library_id": "lib_20250812141651_021af668",
+    "content_type": "text/plain",
+    "uploaded_by": "default_user"
+  },
+  "created_at": null
+}

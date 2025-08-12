@@ -9,13 +9,15 @@ MAKOTO Visual AIのチャット関連APIの詳細仕様書。
 
 **エンドポイント:** `GET /api/chats`
 
-**説明:** 保存されているチャット一覧をページネーション付きで取得します。
+**説明:** 保存されているチャット一覧をカーソルベースページネーションで取得します。
 
 **パラメータ:**
 | パラメータ | 型 | 必須 | デフォルト | 説明 |
 |-----------|-----|------|------------|------|
-| offset | integer | - | 0 | 取得開始位置 |
-| limit | integer | - | 20 | 取得件数 |
+| page_size | integer | - | 50 | 1ページあたりの件数（最大100） |
+| next_key | string | - | null | 次ページ用のカーソルキー |
+| tenant_id | string | - | "default_tenant" | テナントID |
+| user_id | string | - | "default_user" | ユーザーID |
 
 **レスポンス例:**
 ```json
@@ -29,21 +31,19 @@ MAKOTO Visual AIのチャット関連APIの詳細仕様書。
       "last_message": "承知しました。美しい蝶のイラストを生成します。"
     }
   ],
-  "total": 50,
-  "offset": 0,
-  "limit": 20,
-  "has_more": true
+  "has_more": true,
+  "next_key": "CHAT#2025-07-10T09:00:00Z#uuid"
 }
 ```
 
 ### 2. チャット詳細取得
 
-**エンドポイント:** `GET /api/chats/{chat_id}`
+**エンドポイント:** `GET /api/chats/{room_id}`
 
 **説明:** 特定のチャットの詳細情報とメッセージ履歴を取得します。
 
 **パスパラメータ:**
-- `chat_id`: チャットのUUID
+- `room_id`: チャットルームID
 
 **レスポンス例:**
 ```json

@@ -117,32 +117,28 @@ class ChatMessage(BaseModel):
 
 
 class GetChatsParams(BaseModel):
-    """チャット一覧取得パラメータ"""
-    page: Optional[int] = Field(default=1, ge=1)
-    limit: Optional[int] = Field(default=20, ge=1, le=100)
-    sort: Optional[Literal['created_at', 'updated_at']] = 'updated_at'
-    order: Optional[Literal['asc', 'desc']] = 'desc'
+    """チャット一覧取得パラメータ（カーソルベース）"""
+    page_size: Optional[int] = Field(default=50, ge=1, le=100)
+    next_key: Optional[str] = None
 
 
 class GetChatsResponse(BaseModel):
-    """チャット一覧レスポンス"""
+    """チャット一覧レスポンス（カーソルベースページネーション）"""
     chats: List[ChatRoom]
-    total: int
-    page: int
-    limit: int
-    total_pages: int
+    has_more: bool
+    next_key: Optional[str] = None
 
 
 class CreateChatRequest(BaseModel):
     """チャット作成リクエスト"""
-    chat_id: Optional[UUID] = None
+    room_id: Optional[UUID] = None  # chat_idからroom_idに変更
     message: str
     active_modes: Optional[List[ChatMode]] = None
 
 
 class CreateChatResponse(BaseModel):
     """チャット作成レスポンス"""
-    chat_id: UUID
+    room_id: UUID  # chat_idからroom_idに変更
     message_id: UUID
     title: Optional[str] = None
     created_at: DateTime
@@ -158,7 +154,7 @@ class StreamMessage(BaseModel):
 class ChatStreamRequest(BaseModel):
     """チャットストリーミングリクエスト"""
     messages: List[StreamMessage]
-    chat_id: Optional[str] = None
+    room_id: Optional[str] = None  # chat_idからroom_idに変更
     modes: Optional[List[ChatMode]] = None
     stream: Literal[True] = True
     temperature: Optional[float] = Field(default=0.7, ge=0.0, le=2.0)
@@ -205,7 +201,7 @@ class StreamCompleteEvent(BaseModel):
     """ストリーム完了イベント"""
     type: Literal['done'] = 'done'
     done: Literal[True] = True
-    chat_id: str
+    room_id: str  # chat_idからroom_idに変更
     message_id: str
 
 
@@ -554,7 +550,7 @@ class ImageGenerationRequest(BaseModel):
     quality: Optional[ImageQuality] = 'standard'
     style: Optional[ImageStyle] = 'vivid'
     n: Optional[int] = Field(default=1, ge=1, le=10)
-    chat_id: Optional[str] = None
+    room_id: Optional[str] = None  # chat_idからroom_idに変更
     user_tags: Optional[List[str]] = None
     description: Optional[str] = None
     async_: Optional[bool] = Field(default=False, alias='async')

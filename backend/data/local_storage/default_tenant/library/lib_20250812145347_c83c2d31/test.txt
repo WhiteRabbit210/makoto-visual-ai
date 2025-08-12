@@ -1,0 +1,9 @@
+{
+  "content": "これはテスト用のテキストファイルです。\n日本語の処理を確認します。",
+  "metadata": {
+    "library_id": "lib_20250812145347_c83c2d31",
+    "content_type": "application/octet-stream",
+    "uploaded_by": "default_user"
+  },
+  "created_at": null
+}

@@ -25,9 +25,9 @@ export const chatApi = {
   /**
    * 特定のチャットを取得
    */
-  async getChat(chatId: string): Promise<ChatRoom> {
+  async getChat(roomId: string): Promise<ChatRoom> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/chats/${chatId}`);
+      const response = await axios.get(`${API_BASE_URL}/api/chats/${roomId}`);
       return response.data;
     } catch (error) {
       console.error('Get chat error:', error);
@@ -38,9 +38,9 @@ export const chatApi = {
   /**
    * チャットを削除
    */
-  async deleteChat(chatId: string): Promise<void> {
+  async deleteChat(roomId: string): Promise<void> {
     try {
-      await axios.delete(`${API_BASE_URL}/api/chats/${chatId}`);
+      await axios.delete(`${API_BASE_URL}/api/chats/${roomId}`);
     } catch (error) {
       console.error('Delete chat error:', error);
       throw error;

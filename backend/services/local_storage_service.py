@@ -25,13 +25,13 @@ class LocalStorageService:
         key = key.lstrip('/')
         return self.base_dir / key
     
-    async def put_object(self, key: str, body: str, metadata: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    async def put_object(self, key: str, body, metadata: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         """
         オブジェクトを保存（S3のput_objectを模倣）
         
         Args:
             key: オブジェクトキー（S3のキーと同じ形式）
-            body: 保存するコンテンツ
+            body: 保存するコンテンツ（文字列またはバイナリ）
             metadata: メタデータ
             
         Returns:
@@ -40,21 +40,27 @@ class LocalStorageService:
         file_path = self._get_full_path(key)
         file_path.parent.mkdir(parents=True, exist_ok=True)
         
-        # メタデータも一緒に保存
-        data = {
-            "content": body,
-            "metadata": metadata or {},
-            "created_at": str(Path.ctime(file_path)) if file_path.exists() else None
-        }
+        # バイナリかテキストかを判定
+        is_binary = isinstance(body, bytes)
         
-        # 非同期でファイルに書き込み
-        async with aiofiles.open(file_path, 'w', encoding='utf-8') as f:
-            await f.write(json.dumps(data, ensure_ascii=False, indent=2))
+        if is_binary:
+            # バイナリファイルは直接保存
+            async with aiofiles.open(file_path, 'wb') as f:
+                await f.write(body)
+            size = len(body)
+        else:
+            # テキストファイルはそのまま保存
+            async with aiofiles.open(file_path, 'w', encoding='utf-8') as f:
+                await f.write(body)
+            size = len(body.encode('utf-8'))
+        
+        # メタデータは無視（KVMで管理されているため）
+        # S3/Azureのオブジェクトメタデータは、ローカルストレージでは不要
         
         return {
             "success": True,
             "key": key,
-            "size": len(body.encode('utf-8')),
+            "size": size,
             "local_path": str(file_path)
         }
     
@@ -73,15 +79,22 @@ class LocalStorageService:
         if not file_path.exists():
             return None
         
-        # 非同期でファイルから読み込み
-        async with aiofiles.open(file_path, 'r', encoding='utf-8') as f:
-            content = await f.read()
-            data = json.loads(content)
+        # ファイルの内容を確認してバイナリかテキストか判定
+        try:
+            # まずテキストとして読み込みを試みる
+            async with aiofiles.open(file_path, 'r', encoding='utf-8') as f:
+                content = await f.read()
+            is_binary = False
+        except UnicodeDecodeError:
+            # テキストとして読めない場合はバイナリ
+            async with aiofiles.open(file_path, 'rb') as f:
+                content = await f.read()
+            is_binary = True
         
         return {
-            "Body": data.get("content", ""),
-            "Metadata": data.get("metadata", {}),
-            "ContentLength": len(data.get("content", "").encode('utf-8'))
+            "Body": content,
+            "Metadata": {},  # ローカルストレージではメタデータなし（KVMで管理）
+            "ContentLength": len(content) if is_binary else len(content.encode('utf-8'))
         }
     
     async def delete_object(self, key: str) -> bool:

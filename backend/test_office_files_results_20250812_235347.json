@@ -1,0 +1,44 @@
+{
+  "test_date": "2025-08-12T23:53:47.615147",
+  "results": [
+    {
+      "test": "Create Test Library",
+      "status": "success",
+      "library_id": "lib_20250812145347_c83c2d31"
+    },
+    {
+      "test": "Upload and Extract TXT",
+      "status": "success",
+      "text_length": 33,
+      "format": null,
+      "metadata": {},
+      "sample_text": "これはテスト用のテキストファイルです。\n日本語の処理を確認します。"
+    },
+    {
+      "test": "Upload and Extract DOCX",
+      "status": "failed",
+      "stage": "upload",
+      "error": "Upload failed: 400"
+    },
+    {
+      "test": "Upload and Extract XLSX",
+      "status": "failed",
+      "stage": "upload",
+      "error": "Upload failed: 400"
+    },
+    {
+      "test": "Upload and Extract PPTX",
+      "status": "failed",
+      "stage": "upload",
+      "error": "Upload failed: 400"
+    },
+    {
+      "test": "Upload and Extract PDF",
+      "status": "success",
+      "text_length": 546,
+      "format": null,
+      "metadata": {},
+      "sample_text": "%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792]\n/Resources << /Font << /"
+    }
+  ]
+}

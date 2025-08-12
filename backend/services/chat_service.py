@@ -1,86 +1,82 @@
 from datetime import datetime
 import uuid
 from typing import List, Optional, Dict, Any
-from services.database import chats_table, messages_table, ChatQuery
 from services.message_processor import MessageProcessor
 from services.kvm_service import kvm_service
+from services.database import local_index_service
 
 class ChatService:
     @staticmethod
-    def initialize_sample_data():
+    async def initialize_sample_data(tenant_id: str = "default_tenant", user_id: str = "default_user"):
         """サンプルデータの初期化"""
-        if len(chats_table.all()) == 0:
+        # KVMから既存データを確認
+        pk = f"TENANT#{tenant_id}#USER#{user_id}"
+        existing = await kvm_service.query(pk=pk, sk_prefix="CHAT#", page_size=1)
+        
+        if not existing:
             # サンプルチャット1
-            chat1_id = str(uuid.uuid4())
-            chats_table.insert({
-                'id': chat1_id,
-                'title': 'ミツイワ社長について',
-                'created_at': '2025-07-09T12:23:00',
-                'updated_at': '2025-07-09T12:23:40'
-            })
+            chat1 = await ChatService.create_chat(
+                title='ミツイワ社長について',
+                tenant_id=tenant_id,
+                user_id=user_id
+            )
             
             # サンプルメッセージ
-            messages_table.insert({
-                'id': str(uuid.uuid4()),
-                'room_id': chat1_id,
-                'role': 'user',
-                'content': 'ミツイワ株式会社の社長は誰ですか？',
-                'timestamp': '2025-07-09T12:23:19'
-            })
+            await ChatService.add_message(
+                room_id=chat1['id'],
+                role='user',
+                content='ミツイワ株式会社の社長は誰ですか？',
+                tenant_id=tenant_id,
+                user_id=user_id
+            )
             
-            messages_table.insert({
-                'id': str(uuid.uuid4()),
-                'room_id': chat1_id,
-                'role': 'assistant',
-                'content': '''稲葉善典、ご質問をありがとうございます。
-ミツイワ株式会社の現代表取締役社長は「高橋 洋章（たかはし ひろあき）」氏です。
-
-参考情報をまとめると、以下の通りです：
-• 高橋洋章氏は2023年1月1日付で代表取締役社長に就任されています。
-• 1987年に愛知大学法経学部を卒業し、1998年にミツイワ株式会社に入社。
-• 2012年に取締役、2022年に専務を歴任し、社長に就任されました。
-• 前任の重本仁社長は退任されています。''',
-                'timestamp': '2025-07-09T12:23:40'
-            })
+            await ChatService.add_message(
+                room_id=chat1['id'],
+                role='assistant',
+                content='''稲葉善典、ご質問をありがとうございます。
+ミツイワ株式会社の現代表取締役社長は「高橋 洋章（たかはし ひろき）」氏です。''',
+                tenant_id=tenant_id,
+                user_id=user_id
+            )
             
             # サンプルチャット2
-            chat2_id = str(uuid.uuid4())
-            chats_table.insert({
-                'id': chat2_id,
-                'title': '議事録まとめ',
-                'created_at': '2025-07-08T15:00:00',
-                'updated_at': '2025-07-08T15:30:00'
-            })
+            chat2 = await ChatService.create_chat(
+                title='議事録まとめ',
+                tenant_id=tenant_id,
+                user_id=user_id
+            )
             
-            messages_table.insert({
-                'id': str(uuid.uuid4()),
-                'room_id': chat2_id,
-                'role': 'user',
-                'content': '本日の会議の議事録をまとめてください',
-                'timestamp': '2025-07-08T15:00:00'
-            })
+            await ChatService.add_message(
+                room_id=chat2['id'],
+                role='user',
+                content='本日の会議の議事録をまとめてください',
+                tenant_id=tenant_id,
+                user_id=user_id
+            )
             
-            messages_table.insert({
-                'id': str(uuid.uuid4()),
-                'room_id': chat2_id,
-                'role': 'assistant',
-                'content': 'これは議事録のまとめです...',
-                'timestamp': '2025-07-08T15:30:00'
-            })
+            await ChatService.add_message(
+                room_id=chat2['id'],
+                role='assistant',
+                content='これは議事録のまとめです...',
+                tenant_id=tenant_id,
+                user_id=user_id
+            )
+            
+            print("サンプルデータを初期化しました")
 
     @staticmethod
     async def get_all_chats(tenant_id: str = "default_tenant", user_id: str = "default_user", 
-                           limit: int = 50, last_evaluated_key: Optional[str] = None) -> Dict[str, Any]:
+                           page_size: int = 50, last_evaluated_key: Optional[str] = None) -> Dict[str, Any]:
         """全てのチャットを取得（ページネーション対応）
         
         KVM（DynamoDB/CosmosDB）からチャットメタデータを高速取得
-        UIでの遅延読み込みに対応（50件ずつ）
+        カーソルベースページネーション対応
         
         Args:
             tenant_id: テナントID
             user_id: ユーザーID
-            limit: 取得するチャットの最大数（デフォルト50件）
-            last_evaluated_key: 前回の最後のキー（ページネーション用）
+            page_size: 1ページあたりの件数（デフォルト50、最大100）
+            last_evaluated_key: 前回の最後のキー（カーソル）
         
         Returns:
             {
@@ -99,7 +95,7 @@ class ChatService:
         chat_items = await kvm_service.query(
             pk=pk,
             sk_prefix=sk_prefix,
-            limit=limit,
+            limit=page_size,
             scan_forward=False  # 新しい順（SKの降順）
         )
         
@@ -137,24 +133,15 @@ class ChatService:
             
             chats.append(chat_info)
         
-        # ページネーション情報を含むレスポンス
-        response = {
+        # カーソルベースページネーションレスポンス
+        return {
             'chats': chats,
-            'has_more': len(chat_items) == limit,  # limitと同じ数取得できたら、まだデータがある可能性
-            'total_count': len(chats)
+            'has_more': len(chat_items) == page_size,
+            'next_key': chat_items[-1].get('SK', '') if len(chat_items) == page_size and chat_items else None
         }
-        
-        # 次のページ用のキーを設定（最後のアイテムのSK）
-        if len(chat_items) == limit and chat_items:
-            last_item = chat_items[-1]
-            response['next_key'] = last_item.get('SK', '')
-        else:
-            response['next_key'] = None
-        
-        return response
     
     @staticmethod
-    def get_chat(room_id: str, tenant_id: str = "default_tenant", user_id: str = "default_user", limit: int = 50):
+    def get_chat(room_id: str, tenant_id: str = "default_tenant", user_id: str = "default_user", page_size: int = 50):
         """特定のチャットを取得
         
         BlobStorage/S3から直接メッセージを読み込む
@@ -163,7 +150,7 @@ class ChatService:
             room_id: チャットルームID
             tenant_id: テナントID
             user_id: ユーザーID
-            limit: 取得するメッセージの最大数
+            page_size: 1ページあたりのメッセージ数
         
         Returns:
             チャット情報とメッセージリスト
@@ -192,7 +179,7 @@ class ChatService:
         try:
             # オブジェクトリストを取得
             result = loop.run_until_complete(
-                storage_service.list_objects(prefix=prefix, limit=limit*2)  # 余裕を持って取得
+                storage_service.list_objects(prefix=prefix, limit=page_size*2)  # 余裕を持って取得
             )
             
             messages = []
@@ -202,7 +189,7 @@ class ChatService:
                     result['objects'], 
                     key=lambda x: x['key'], 
                     reverse=True
-                )[:limit]  # 最新N件を取得
+                )[:page_size]  # 最新N件を取得
                 
                 # 各メッセージファイルを読み込む
                 async def fetch_messages():

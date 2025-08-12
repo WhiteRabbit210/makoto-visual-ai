@@ -24,7 +24,7 @@ interface GeneratedImage {
 // ストリーミングコールバック型定義（型安全で再利用可能）
 interface StreamingCallbacks {
   onChunk: (chunk: string) => void;
-  onDone: (chatId?: string, crawlSources?: CrawlSource[]) => void;
+  onDone: (roomId?: string, crawlSources?: CrawlSource[]) => void;
   onImage?: (images: GeneratedImage[]) => void;
   onGeneratingImage?: () => void;
   onImageError?: (error: string) => void;
@@ -92,7 +92,7 @@ export const chatGPTApi = {
                   try {
                     const parsed = JSON.parse(data);
                     if (parsed.done) {
-                      onDone(parsed.chat_id, parsed.crawl_sources as CrawlSource[] | undefined);
+                      onDone(parsed.room_id, parsed.crawl_sources as CrawlSource[] | undefined);
                       return;
                     } else if (parsed.content) {
                       onChunk(parsed.content);
@@ -132,8 +132,8 @@ export const chatGPTApi = {
               try {
                 const parsed = JSON.parse(data);
                 if (parsed.done) {
-                  onDone(parsed.chat_id, parsed.crawl_sources as CrawlSource[] | undefined);
-                  return parsed.chat_id;
+                  onDone(parsed.room_id, parsed.crawl_sources as CrawlSource[] | undefined);
+                  return parsed.room_id;
                 } else if (parsed.content) {
                   onChunk(parsed.content);
                 } else if (parsed.type === 'agent_thought' && onAgentThought) {

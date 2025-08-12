@@ -1,0 +1,183 @@
+{
+  "test_date": "2025-08-12T23:24:59.949722",
+  "results": [
+    {
+      "test": "Create Library",
+      "status": "success",
+      "library_id": "lib_20250812142459_0d99324b",
+      "data": {
+        "id": "lib_20250812142459_0d99324b",
+        "name": "テストライブラリ_20250812_232459",
+        "description": "テスト用のライブラリです",
+        "file_count": 0,
+        "total_size": 0,
+        "created_at": "2025-08-12T14:24:59.930745",
+        "updated_at": "2025-08-12T14:24:59.930750",
+        "metadata": {
+          "category": "test",
+          "created_by": "test_script"
+        }
+      }
+    },
+    {
+      "test": "Get Libraries",
+      "status": "success",
+      "count": 1,
+      "data": [
+        {
+          "id": "lib_20250812142459_0d99324b",
+          "name": "テストライブラリ_20250812_232459",
+          "description": "テスト用のライブラリです",
+          "file_count": 0,
+          "total_size": 0,
+          "created_at": "2025-08-12T14:24:59.930745",
+          "updated_at": "2025-08-12T14:24:59.930750",
+          "embedding_status": "idle",
+          "vector_count": 0
+        }
+      ]
+    },
+    {
+      "test": "Get Library Detail",
+      "status": "success",
+      "library_id": "lib_20250812142459_0d99324b",
+      "data": {
+        "id": "lib_20250812142459_0d99324b",
+        "name": "テストライブラリ_20250812_232459",
+        "description": "テスト用のライブラリです",
+        "files": [],
+        "file_count": 0,
+        "total_size": 0,
+        "created_at": "2025-08-12T14:24:59.930745",
+        "updated_at": "2025-08-12T14:24:59.930750",
+        "metadata": {
+          "category": "test",
+          "created_by": "test_script"
+        },
+        "embedding_status": "idle",
+        "vector_count": 0
+      }
+    },
+    {
+      "test": "Update Library",
+      "status": "success",
+      "library_id": "lib_20250812142459_0d99324b",
+      "data": {
+        "id": "lib_20250812142459_0d99324b",
+        "name": "更新されたライブラリ_232459",
+        "description": "更新されたテスト用ライブラリ",
+        "files": [],
+        "file_count": 0,
+        "total_size": 0,
+        "created_at": "2025-08-12T14:24:59.930745",
+        "updated_at": "2025-08-12T14:24:59.933010",
+        "metadata": {
+          "category": "test",
+          "updated_by": "test_script",
+          "updated_at": "2025-08-12T23:24:59.932693"
+        },
+        "embedding_status": "idle",
+        "vector_count": 0
+      }
+    },
+    {
+      "test": "Upload File",
+      "status": "success",
+      "library_id": "lib_20250812142459_0d99324b",
+      "filename": "test_document.txt",
+      "data": {
+        "filename": "test_document.txt",
+        "size": 333,
+        "content_type": "text/plain",
+        "uploaded_at": "2025-08-12T14:24:59.938579",
+        "library_id": "lib_20250812142459_0d99324b",
+        "embedding_status": "pending"
+      }
+    },
+    {
+      "test": "Download File",
+      "status": "success",
+      "library_id": "lib_20250812142459_0d99324b",
+      "filename": "test_document.txt",
+      "content_size": 333,
+      "content_type": "text/plain; charset=utf-8"
+    },
+    {
+      "test": "Extract Text",
+      "status": "success",
+      "library_id": "lib_20250812142459_0d99324b",
+      "filename": "test_document.txt",
+      "text_length": 131,
+      "data": {
+        "filename": "test_document.txt",
+        "text": "これはテスト用のテキストファイルです。\nライブラリAPIのファイルアップロード機能をテストしています。\n日本語の内容も正しく処理されることを確認します。\n\nテストデータ:\n- 項目1: テストデータA\n- 項目2: テストデータB\n- 項目3: テストデータC\n",
+        "extracted_at": "2025-08-12T14:24:59.945953"
+      }
+    },
+    {
+      "test": "Delete File",
+      "status": "success",
+      "library_id": "lib_20250812142459_0d99324b",
+      "filename": "test_document.txt",
+      "data": {
+        "message": "File deleted successfully",
+        "filename": "test_document.txt"
+      }
+    },
+    {
+      "test": "Start Embeddings",
+      "status": "success",
+      "library_id": "lib_20250812142459_0d99324b",
+      "job_id": "job_lib_20250812142459_0d99324b_20250812142459",
+      "data": {
+        "job_id": "job_lib_20250812142459_0d99324b_20250812142459",
+        "status": "pending",
+        "message": "Embedding job started",
+        "library_id": "lib_20250812142459_0d99324b"
+      }
+    },
+    {
+      "test": "Get Embedding Status",
+      "status": "success",
+      "library_id": "lib_20250812142459_0d99324b",
+      "embedding_status": "idle",
+      "data": {
+        "status": "idle",
+        "total_chunks": 0,
+        "embedded_chunks": 0,
+        "last_updated": "2025-08-12T14:24:59.946555",
+        "vector_count": 0
+      }
+    },
+    {
+      "test": "Search Library (Vector)",
+      "status": "success",
+      "library_id": "lib_20250812142459_0d99324b",
+      "results_count": 1,
+      "data": {
+        "results": [
+          {
+            "filename": "sample.pdf",
+            "chunk": "This is a sample text chunk that matches the query.",
+            "score": 0.95,
+            "metadata": {
+              "page": 1,
+              "position": 0
+            }
+          }
+        ],
+        "query": "テストデータ",
+        "library_id": "lib_20250812142459_0d99324b"
+      }
+    },
+    {
+      "test": "Delete Library",
+      "status": "success",
+      "library_id": "lib_20250812142459_0d99324b",
+      "data": {
+        "message": "Library deleted successfully",
+        "deleted_files": 0
+      }
+    }
+  ]
+}

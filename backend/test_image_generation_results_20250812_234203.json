@@ -1,0 +1,15 @@
+{
+  "test_date": "2025-08-12T23:42:03.393970",
+  "results": [
+    {
+      "test": "Direct Image Generation",
+      "status": "failed",
+      "error": "{\n  \"error\": {\n    \"message\": \"Invalid value: 'standard'. Supported values are: 'low', 'medium', 'high', and 'auto'.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": \"quality\",\n    \"code\": \"invalid_value\"\n  }\n}"
+    },
+    {
+      "test": "Chat API with Image Mode",
+      "status": "failed",
+      "error": "Status 404: {\"detail\":\"Not Found\"}"
+    }
+  ]
+}

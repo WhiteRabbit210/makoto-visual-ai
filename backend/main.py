@@ -6,7 +6,7 @@ import os
 import uvicorn
 import time
 
-from api import chat, library, task, task_template, settings, websocket, agent, webcrawl
+from api import chat, library, task, websocket, agent, webcrawl  # task_template,settingsを一時的に無効化
 from utils.logger import api_logger
 
 # Load environment variables
@@ -50,10 +50,10 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Include routers
 app.include_router(chat.router, prefix="/api", tags=["chat"])
-app.include_router(library.router, prefix="/api/library", tags=["library"])
+app.include_router(library.router, prefix="/api", tags=["library"])
 app.include_router(task.router, prefix="/api/tasks", tags=["task"])
-app.include_router(task_template.router, prefix="/api", tags=["task_template"])
-app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
+# app.include_router(task_template.router, prefix="/api", tags=["task_template"])  # 一時的に無効化
+# app.include_router(settings.router, prefix="/api/settings", tags=["settings"])  # 一時的に無効化
 app.include_router(agent.router, prefix="/api/agent", tags=["agent"])
 app.include_router(webcrawl.router, prefix="/api/webcrawl", tags=["webcrawl"])
 app.include_router(websocket.router, prefix="/ws", tags=["websocket"])

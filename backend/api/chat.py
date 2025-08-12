@@ -65,7 +65,7 @@ class ChatCompletionRequest(BaseModel):
     max_tokens: Optional[int] = 1000
     stream: Optional[bool] = False
     modes: Optional[List[str]] = []  # active_modes から modes に変更
-    chat_id: Optional[str] = None
+    room_id: Optional[str] = None  # chat_idからroom_idに変更
     search_keywords: Optional[List[str]] = None  # エージェントが提供する検索キーワード
 
 class ChatCompletionResponse(BaseModel):
@@ -73,7 +73,7 @@ class ChatCompletionResponse(BaseModel):
     usage: Optional[Dict[str, Any]] = None
 
 class ChatResponse(BaseModel):
-    chat_id: str
+    room_id: str  # chat_idからroom_idに変更
     message: Dict[str, Any]
     response: Dict[str, Any]
 
@@ -103,18 +103,16 @@ class ImageGenerationResponse(BaseModel):
 
 @router.get("/chats")
 async def get_chats(
-    limit: int = 50,
+    page_size: int = 50,
     next_key: Optional[str] = None,
     tenant_id: str = "default_tenant",
     user_id: str = "default_user"
 ):
-    """チャット一覧を取得（ページネーション対応）
-    
-    UIでの遅延読み込みに対応した50件ずつのページネーション
+    """チャット一覧を取得（カーソルベースページネーション）
     
     Args:
-        limit: 取得件数（デフォルト50件）
-        next_key: 次ページ用のキー（初回はNone）
+        page_size: 1ページあたりの件数（デフォルト50、最大100）
+        next_key: 次ページ用のカーソルキー（初回はNone）
         tenant_id: テナントID
         user_id: ユーザーID
     
@@ -122,14 +120,13 @@ async def get_chats(
         {
             "chats": チャットリスト,
             "has_more": まだデータがあるか,
-            "next_key": 次ページ用のキー,
-            "total_count": 現在のページの件数
+            "next_key": 次ページ用のキー
         }
     """
     result = await ChatService.get_all_chats(
         tenant_id=tenant_id,
         user_id=user_id,
-        limit=limit,
+        limit=page_size,
         last_evaluated_key=next_key
     )
     
@@ -228,7 +225,7 @@ async def create_chat(
         )
     
     return ChatResponse(
-        chat_id=room_id,  # 互換性のためchat_idとして返す
+        room_id=room_id,
         message=user_message,
         response=ai_message
     )
@@ -655,28 +652,28 @@ async def chat_stream(request: ChatCompletionRequest):
             
             # ストリーミング完了時にメッセージを保存
             try:
-                # チャットIDを取得または作成
-                chat_id = request.chat_id
+                # ルームIDを取得または作成
+                room_id = request.room_id
                 
                 # ユーザーメッセージを取得
                 user_messages = [msg for msg in request.messages if msg.role == "user"]
                 last_user_message = user_messages[-1] if user_messages else None
                 
-                if not chat_id and last_user_message:
+                if not room_id and last_user_message:
                     # 新しいチャットを作成
                     title = last_user_message.content[:50] + "..." if len(last_user_message.content) > 50 else last_user_message.content
                     chat = ChatService.create_chat(title)
-                    chat_id = chat['id']
+                    room_id = chat['id']
                     
                     # ユーザーメッセージを保存
-                    ChatService.add_message(chat_id, "user", last_user_message.content)
-                elif chat_id and last_user_message:
+                    ChatService.add_message(room_id, "user", last_user_message.content)
+                elif room_id and last_user_message:
                     # 既存のチャットにユーザーメッセージを追加
-                    ChatService.add_message(chat_id, "user", last_user_message.content)
+                    ChatService.add_message(room_id, "user", last_user_message.content)
                 
                 # まずAIメッセージを保存（画像はプレースホルダー付き）
                 assistant_message = None
-                if chat_id and full_response:
+                if room_id and full_response:
                     # 画像生成モードの場合はプレースホルダーを準備
                     placeholder_images = []
                     if request.modes and "image" in request.modes and last_user_message:
@@ -684,7 +681,7 @@ async def chat_stream(request: ChatCompletionRequest):
                         import uuid
                         image_id = str(uuid.uuid4())
                         placeholder_images = [{
-                            "url": f"placeholder://image/{chat_id}/{image_id}",
+                            "url": f"placeholder://image/{room_id}/{image_id}",
                             "status": "generating",
                             "prompt": last_user_message.content
                         }]
@@ -699,7 +696,7 @@ async def chat_stream(request: ChatCompletionRequest):
                     # メッセージを保存（プレースホルダー付き）
                     message_save_start = time.time()
                     assistant_message = ChatService.add_message(
-                        chat_id, 
+                        room_id, 
                         "assistant", 
                         full_response, 
                         placeholder_images if placeholder_images else None,
@@ -707,7 +704,7 @@ async def chat_stream(request: ChatCompletionRequest):
                     )
                     performance_breakdown['message_save'] = time.time() - message_save_start
                     logger.info(f"メッセージ保存完了: {performance_breakdown['message_save']:.3f}秒")
-                    log_chat_response(full_response[:100], {"saved": True, "chat_id": chat_id, "message_id": assistant_message['id'], "size_bytes": message_size})
+                    log_chat_response(full_response[:100], {"saved": True, "room_id": room_id, "message_id": assistant_message['id'], "size_bytes": message_size})
                     
                     # 画像生成モードが有効な場合は画像を生成
                     if request.modes and "image" in request.modes and last_user_message and assistant_message:
@@ -739,7 +736,7 @@ async def chat_stream(request: ChatCompletionRequest):
                                 
                                 # エラー時はプレースホルダーをエラー状態に更新
                                 error_images = [{
-                                    "url": f"placeholder://image/{chat_id}/{image_id}",
+                                    "url": f"placeholder://image/{room_id}/{image_id}",
                                     "status": "error",
                                     "error": error_msg,
                                     "prompt": last_user_message.content
@@ -752,7 +749,7 @@ async def chat_stream(request: ChatCompletionRequest):
                             
                             # エラー時はプレースホルダーをエラー状態に更新
                             error_images = [{
-                                "url": f"placeholder://image/{chat_id}/{image_id}",
+                                "url": f"placeholder://image/{room_id}/{image_id}",
                                 "status": "error",
                                 "error": str(e),
                                 "prompt": last_user_message.content
@@ -765,8 +762,8 @@ async def chat_stream(request: ChatCompletionRequest):
                         yield data
                 
                 # 新規チャットの場合、タイトルを自動生成
-                is_new_chat = not request.chat_id
-                if is_new_chat and last_user_message and full_response and chat_id:
+                is_new_chat = not request.room_id
+                if is_new_chat and last_user_message and full_response and room_id:
                     # ユーザーメッセージが短い場合はそのまま使用
                     if len(last_user_message.content) <= 30:
                         new_title = last_user_message.content
@@ -775,11 +772,11 @@ async def chat_stream(request: ChatCompletionRequest):
                         new_title = last_user_message.content[:30] + "..."
                     
                     # タイトルを更新
-                    ChatService.update_chat_title(chat_id, new_title)
-                    logger.info(f"チャットタイトル更新: {chat_id} -> {new_title}")
+                    ChatService.update_chat_title(room_id, new_title)
+                    logger.info(f"チャットタイトル更新: {room_id} -> {new_title}")
                 
-                # チャットIDとクロール結果をクライアントに送信
-                done_data = {'done': True, 'chat_id': chat_id}
+                # ルームIDとクロール結果をクライアントに送信
+                done_data = {'done': True, 'room_id': room_id}
                 if crawl_sources:
                     done_data['crawl_sources'] = crawl_sources
                 yield f"data: {json.dumps(done_data)}\n\n"

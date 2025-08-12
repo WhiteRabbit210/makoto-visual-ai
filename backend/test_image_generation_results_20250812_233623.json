@@ -1,0 +1,15 @@
+{
+  "test_date": "2025-08-12T23:36:23.062515",
+  "results": [
+    {
+      "test": "Direct Image Generation",
+      "status": "failed",
+      "error": "{\"error\":{\"code\":\"404\",\"message\": \"Resource not found\"}}"
+    },
+    {
+      "test": "Chat API with Image Mode",
+      "status": "failed",
+      "error": "Status 404: {\"detail\":\"Not Found\"}"
+    }
+  ]
+}

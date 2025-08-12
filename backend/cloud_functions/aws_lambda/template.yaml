@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: MAKOTO Visual AI - 日次バッチ処理Lambda
+
+Globals:
+  Function:
+    Timeout: 900  # 15分（バッチ処理のため長めに設定）
+    MemorySize: 3008  # 3GB（Parquet処理のため多めに確保）
+    Runtime: python3.11
+    Environment:
+      Variables:
+        TENANT_ID: !Ref TenantId
+        TARGET_DATE_OFFSET: !Ref TargetDateOffset
+        AWS_DEFAULT_REGION: !Ref AWS::Region
+
+Parameters:
+  TenantId:
+    Type: String
+    Default: "default_tenant"
+    Description: 処理対象のテナントID（カンマ区切りで複数指定可）
+  
+  TargetDateOffset:
+    Type: String
+    Default: "-1"
+    Description: 処理対象日のオフセット（-1=昨日）
+  
+  S3BucketName:
+    Type: String
+    Description: データ保存用S3バケット名
+
+Resources:
+  DailyBatchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: makoto-daily-batch-processor
+      CodeUri: .
+      Handler: daily_batch.lambda_handler
+      Description: MAKOTO日次バッチ処理（メッセージをParquet形式に変換）
+      Layers:
+        - !Ref PythonDependenciesLayer
+      Policies:
+        # S3アクセス権限
+        - S3CrudPolicy:
+            BucketName: !Ref S3BucketName
+        # DynamoDBアクセス権限（KVM用）
+        - DynamoDBCrudPolicy:
+            TableName: makoto-metadata
+      Events:
+        DailySchedule:
+          Type: Schedule
+          Properties:
+            Name: makoto-daily-batch-schedule
+            Description: 毎日午前2時（JST）に実行
+            Schedule: cron(0 17 * * ? *)  # UTC 17:00 = JST 2:00
+            Enabled: true
+            RetryPolicy:
+              MaximumRetryAttempts: 2
+              MaximumEventAge: 3600  # 1時間
+
+  # Python依存関係のLayer
+  PythonDependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: makoto-batch-dependencies
+      Description: Pandas, PyArrow等のバッチ処理用ライブラリ
+      ContentUri: layers/
+      CompatibleRuntimes:
+        - python3.11
+      RetentionPolicy: Delete
+
+  # CloudWatchログ
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${DailyBatchFunction}
+      RetentionInDays: 30  # 30日間保持
+
+  # 処理失敗時のアラーム
+  BatchFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: makoto-batch-failure
+      AlarmDescription: バッチ処理の失敗を検知
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 86400  # 1日
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref DailyBatchFunction
+
+Outputs:
+  FunctionArn:
+    Description: Lambda関数のARN
+    Value: !GetAtt DailyBatchFunction.Arn
+  
+  ScheduleRuleName:
+    Description: EventBridgeルール名
+    Value: makoto-daily-batch-schedule
