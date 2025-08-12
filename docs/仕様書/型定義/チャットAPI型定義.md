@@ -73,7 +73,7 @@ interface ChatRoom {
   // 統計情報
   message_count: number;           // メッセージ数
   last_message?: {                 // 最後のメッセージ（オプション）
-    text: string;                  // 最後のメッセージ（プレビュー）
+    content: string;               // 最後のメッセージ（プレビュー）
     timestamp: string;             // タイムスタンプ
     role: string;                  // 発言者役割
   };
@@ -117,15 +117,26 @@ type ChatMode = "chat" | "image" | "web" | "rag";
 
 Server-Sent Events（SSE）を使用したストリーミング応答の型定義。
 
+#### StreamMessage
+```typescript
+// ストリーミング用の簡略版メッセージ
+interface StreamMessage {
+  role: MessageRole;               // 送信者の役割
+  content: string;                 // メッセージ内容
+  timestamp?: string;              // タイムスタンプ（オプション）
+}
+```
+
 #### ChatStreamRequest
 ```typescript
 interface ChatStreamRequest {
-  messages: ChatMessage[];         // メッセージ履歴（必須）
+  messages: StreamMessage[];       // 簡略版メッセージ履歴（必須）
   chat_id?: string;                // 既存チャットID（オプション）
   modes?: ChatMode[];              // アクティブモード（オプション）
   stream: true;                    // ストリーミングフラグ（必須）
   temperature?: number;            // 生成温度（0.0-1.0、オプション）
   max_tokens?: number;             // 最大トークン数（オプション）
+  search_keywords?: string[];      // エージェント検索キーワード（オプション）
 }
 ```
 
@@ -197,7 +208,7 @@ interface ChatMessage {
   
   // メッセージ情報
   role: MessageRole;               // 送信者の役割
-  text: string;                    // メッセージ本文
+  content: string;                 // メッセージ本文
   
   // RAGコンテキスト（非表示）
   context?: RAGContext;            // RAGコンテキスト（オプション）
@@ -221,7 +232,7 @@ interface RAGContext {
   rag_sources: Array<{             // RAGソース情報
     title: string;                 // ソースタイトル
     source: string;                // ソース種別（internal-db, web等）
-    text: string;                  // 参照されたテキスト
+    content: string;               // 参照されたテキスト
     score: number;                 // 関連性スコア（0.0-1.0）
   }>;
 }

@@ -21,15 +21,15 @@ from .primitives import (
 )
 
 
-# チャットモード型
+# チャットモード型（ドキュメント準拠）
 ChatMode = Literal["chat", "image", "web", "rag"]
 
-# チャット設定型
+# チャット設定型（ドキュメント準拠）
 @dataclass
 class ChatSettings:
     """チャット設定"""
     system_prompt: Optional[str] = None  # カスタムシステムプロンプト
-    temperature: Optional[float] = None  # 生成温度 (0.0-1.0)
+    temperature: Optional[float] = None  # 生成温度 (0.0-2.0)
     active_modes: List[ChatMode] = field(default_factory=list)  # 有効なモード
     max_tokens: Optional[int] = None  # 最大トークン数
 
@@ -118,8 +118,8 @@ class BaseEntity:
     updated_at: datetime  # 更新日時
     created_by: UserId  # 作成者
     updated_by: UserId  # 更新者
-    version: int = 1  # バージョン番号
-    is_deleted: bool = False  # 削除フラグ
+    version: int = field(default=1)  # バージョン番号
+    is_deleted: bool = field(default=False)  # 削除フラグ
     metadata: Metadata = field(default_factory=dict)  # メタデータ
 
 
@@ -128,7 +128,7 @@ class User(BaseEntity):
     """
     ユーザーエンティティ
     """
-    username: str  # ユーザー名（ログインID、必須）
+    username: str = ""  # ユーザー名（ログインID、必須）
     email: Optional[str] = None  # メールアドレス（オプション）
     email_verified: bool = False  # メール確認状態
     cognito_sub: Optional[str] = None  # Cognitoユーザーサブ
@@ -146,11 +146,11 @@ class User(BaseEntity):
 @dataclass
 class Chat(BaseEntity):
     """
-    チャットエンティティ
+    チャットルームエンティティ（ドキュメント準拠）
     """
-    id: ChatId  # チャットID (BaseEntityのidをオーバーライド)
-    user_id: UserId  # 所有者ID
-    title: str  # タイトル
+    id: ChatId  # room_id（チャットルームID）
+    user_id: UserId = field(default="")  # 所有者ID
+    title: str = ""  # タイトル
     model: str = "gpt-4"  # 使用モデル
     status: str = "active"  # ステータス (active, archived, deleted)
     message_count: int = 0  # メッセージ数
@@ -165,9 +165,9 @@ class Message(BaseEntity):
     メッセージエンティティ
     """
     id: MessageId  # メッセージID
-    chat_id: ChatId  # チャットID
-    role: str  # ロール (user, assistant, system)
-    content: str  # メッセージ内容
+    chat_id: ChatId = field(default="")  # チャットID（room_idと同義）
+    role: str = "user"  # ロール (user, assistant, system)
+    text: str = ""  # メッセージテキスト（ドキュメント準拠）
     model: Optional[str] = None  # 使用モデル (assistantの場合)
     attachments: List[FileId] = field(default_factory=list)  # 添付ファイル
     references: List[MessageId] = field(default_factory=list)  # 参照メッセージ
@@ -183,10 +183,10 @@ class File(BaseEntity):
     ファイルエンティティ
     """
     id: FileId  # ファイルID
-    filename: str  # ファイル名
-    content_type: str  # コンテンツタイプ
-    size: int  # ファイルサイズ (バイト)
-    storage_path: str  # ストレージパス
+    filename: str = ""  # ファイル名
+    content_type: str = ""  # コンテンツタイプ
+    size: int = 0  # ファイルサイズ (バイト)
+    storage_path: str = ""  # ストレージパス
     url: Optional[str] = None  # アクセスURL
     thumbnail_url: Optional[str] = None  # サムネイルURL
     checksum: Optional[str] = None  # チェックサム
@@ -202,9 +202,9 @@ class Agent(BaseEntity):
     エージェントエンティティ
     """
     id: AgentId  # エージェントID
-    name: str  # エージェント名
-    description: str  # 説明
-    type: str  # タイプ (chat, task, workflow)
+    name: str = ""  # エージェント名
+    description: str = ""  # 説明
+    type: str = "chat"  # タイプ (chat, task, workflow)
     configuration: Optional[AgentConfiguration] = None  # エージェント設定
     capabilities: List[str] = field(default_factory=list)  # 機能リスト
     model: str = "gpt-4"  # デフォルトモデル
@@ -221,9 +221,9 @@ class Library(BaseEntity):
     ライブラリエンティティ
     """
     id: LibraryId  # ライブラリID
-    name: str  # ライブラリ名
+    name: str = ""  # ライブラリ名
     description: Optional[str] = None  # 説明
-    type: str  # タイプ (document, image, audio, video)
+    type: str = "document"  # タイプ (document, image, audio, video)
     files: List[FileId] = field(default_factory=list)  # ファイルリスト
     index_status: str = "pending"  # インデックス状態
     index_metadata: Optional[IndexMetadata] = None  # インデックスメタデータ

@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* グローバルスタイル */
+@layer base {
+  body {
+    @apply bg-bg-secondary;
+    background-attachment: fixed;
+  }
+}
+
+/* カスタムスクロールバー */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* カードとコンテナスタイル */
+@layer components {
+  .card-base {
+    @apply bg-white rounded-lg border border-border transition-all duration-300;
+  }
+  
+  .card-hover {
+    @apply hover:border-primary-blue/30 hover:shadow-md hover:-translate-y-1 transition-all duration-300;
+  }
+  
+  .gradient-header {
+    background: linear-gradient(135deg, #E0E7FF 0%, #F3E8FF 100%);
+  }
+  
+  .glass {
+    @apply bg-white/95 backdrop-blur-sm border border-border;
+  }
+  
+  .glass-card {
+    @apply bg-white rounded-lg border border-border;
+  }
+  
+  .glass-sidebar {
+    @apply bg-white border-r border-border;
+  }
+  
+  .glass-panel {
+    @apply bg-white/95 backdrop-blur-sm;
+  }
+  
+  .glass-input {
+    @apply bg-white border border-border focus:border-primary-blue focus:ring-1 focus:ring-primary-blue/10 transition-all duration-200;
+  }
+  
+  .btn-gradient {
+    @apply bg-primary-blue text-white hover:bg-primary-blue/90 hover:shadow-lg transition-all duration-300;
+  }
+}
+
+/* アニメーション */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+  background-size: 200% 100%;
+}

@@ -227,7 +227,7 @@ class BatchRequest(BaseRequest, Generic[T]):
     バッチリクエスト
     複数のアイテムを一括処理
     """
-    items: List[T]  # 処理対象アイテム
+    items: List[T] = field(default_factory=list)  # 処理対象アイテム
     continue_on_error: bool = False  # エラー時も継続するか
     
     def __post_init__(self):
@@ -278,7 +278,7 @@ class StreamingResponse(BaseResponse[T], Generic[T]):
     ストリーミングレスポンス
     Server-Sent Events用
     """
-    event_type: str  # イベントタイプ
+    event_type: str = ""  # イベントタイプ
     event_id: Optional[str] = None  # イベントID
     retry: Optional[int] = None  # リトライ間隔（ミリ秒）
     
@@ -296,3 +296,50 @@ class StreamingResponse(BaseResponse[T], Generic[T]):
             lines.append(f"data: {json.dumps(self.data)}")
         lines.append("")  # 空行で終了
         return "\n".join(lines)
+
+
+# SSEイベント型定義（ドキュメント準拠）
+@dataclass
+class GeneratedImage:
+    """生成された画像"""
+    url: str
+    prompt: str
+    size: str
+    style: Optional[str] = None
+
+
+@dataclass
+class TextChunkEvent:
+    """テキストチャンクイベント"""
+    type: str = "text"
+    content: str = ""
+
+
+@dataclass
+class ImageGeneratingEvent:
+    """画像生成開始イベント"""
+    type: str = "generating_image"
+    generating_image: bool = True
+
+
+@dataclass
+class ImageGeneratedEvent:
+    """画像生成完了イベント"""
+    type: str = "images"
+    images: List[GeneratedImage] = field(default_factory=list)
+
+
+@dataclass
+class StreamErrorEvent:
+    """ストリームエラーイベント"""
+    type: str = "error"
+    error: str = ""
+
+
+@dataclass
+class StreamCompleteEvent:
+    """ストリーム完了イベント"""
+    type: str = "done"
+    done: bool = True
+    chat_id: str = ""
+    message_id: str = ""

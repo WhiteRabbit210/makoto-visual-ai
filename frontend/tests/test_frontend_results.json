@@ -1,0 +1,107 @@
+{
+  "実行日時": "2025-08-12T00:43:39.297Z",
+  "環境": "development",
+  "テスト項目": [
+    {
+      "項目": "Node.jsバージョン確認",
+      "結果": "成功",
+      "実行時間": "18ms",
+      "詳細": "v18.19.1\n"
+    },
+    {
+      "項目": "npmバージョン確認",
+      "結果": "成功",
+      "実行時間": "374ms",
+      "詳細": "9.2.0\n"
+    },
+    {
+      "項目": "package.json検証",
+      "結果": "成功",
+      "実行時間": "764ms",
+      "詳細": "OK\n"
+    },
+    {
+      "項目": "package.json",
+      "結果": "成功",
+      "詳細": "package.json"
+    },
+    {
+      "項目": "TypeScript設定",
+      "結果": "成功",
+      "詳細": "tsconfig.json"
+    },
+    {
+      "項目": "Vite設定",
+      "結果": "成功",
+      "詳細": "vite.config.ts"
+    },
+    {
+      "項目": "Tailwind設定",
+      "結果": "成功",
+      "詳細": "tailwind.config.js"
+    },
+    {
+      "項目": "エントリーポイント",
+      "結果": "成功",
+      "詳細": "src/main.tsx"
+    },
+    {
+      "項目": "Appコンポーネント",
+      "結果": "成功",
+      "詳細": "src/App.tsx"
+    },
+    {
+      "項目": "型チェック",
+      "結果": "成功",
+      "実行時間": "621ms",
+      "詳細": ""
+    },
+    {
+      "項目": "Lintチェック",
+      "結果": "成功",
+      "実行時間": "2286ms",
+      "詳細": "\n> makoto-ui@0.0.0 lint\n> eslint .\n\n\n/home/whiterabbit/Projects/makoto_ui-1/makoto/frontend/src/features/chat/modules/MessageInput/ActionMenu/ActionMenu.tsx\n  22:14  warning  Fast refresh only works w"
+    },
+    {
+      "項目": "プロダクションビルド",
+      "結果": "失敗",
+      "実行時間": "3239ms",
+      "エラー": "Command failed: npm run build\n"
+    },
+    {
+      "項目": "Chat API定義",
+      "結果": "成功",
+      "詳細": "src/core/api/chat.ts"
+    },
+    {
+      "項目": "Agent API定義",
+      "結果": "成功",
+      "詳細": "src/core/api/agent.ts"
+    },
+    {
+      "項目": "WebCrawl API定義",
+      "結果": "成功",
+      "詳細": "src/core/api/webcrawl.ts"
+    },
+    {
+      "項目": "TaskTemplates API定義",
+      "結果": "成功",
+      "詳細": "src/core/api/taskTemplates.ts"
+    },
+    {
+      "項目": "Chatページ",
+      "結果": "成功",
+      "詳細": "src/features/chat/pages/Chat.tsx"
+    },
+    {
+      "項目": "Libraryページ",
+      "結果": "成功",
+      "詳細": "src/pages/Library/index.tsx"
+    },
+    {
+      "項目": "Layoutコンポーネント",
+      "結果": "成功",
+      "詳細": "src/shared/components/Layout/index.tsx"
+    }
+  ]
+}

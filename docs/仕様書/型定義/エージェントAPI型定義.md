@@ -132,6 +132,21 @@ interface AgentStatusMessage {
 
 注: エージェントの思考状態やストリーミング応答の詳細な型定義は[SSE仕様書](../SSE仕様書.md)を参照してください。
 
+## エージェント思考状態
+
+エージェントの思考プロセスを表現する状態の型定義：
+
+```typescript
+type AgentThinkingStatus = 'thinking' | 'analyzing' | 'searching' | 'crawling' | 'generating' | 'complete';
+```
+
+- `thinking`: 一般的な思考中
+- `analyzing`: プロンプトを分析中
+- `searching`: Web検索を実行中
+- `crawling`: Webページをクロール中
+- `generating`: コンテンツ（テキストまたは画像）を生成中
+- `complete`: 処理完了
+
 ## オーケストレーション型定義
 
 ### ExecutionPlan
