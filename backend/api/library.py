@@ -327,6 +327,50 @@ async def extract_text(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# エンベディング処理の共通関数
+async def _process_file_embedding(
+    library_id: str,
+    filename: str,
+    file_data: Dict[str, Any],
+    tenant_id: str,
+    user_id: str
+) -> Dict[str, Any]:
+    """ファイルのエンベディング処理を実行（共通処理）"""
+    from services.embedding_service import embedding_service
+    from services.document_extractor import document_extractor
+    
+    # コンテンツを取得
+    content = file_data.get('content')
+    if isinstance(content, str):
+        content = content.encode('utf-8')
+    
+    # テキスト抽出
+    extract_result = await document_extractor.extract_text(content, filename)
+    
+    if not extract_result.success or not extract_result.text:
+        return {
+            "filename": filename,
+            "status": "failed",
+            "reason": "Text extraction failed"
+        }
+    
+    # エンベディング処理
+    process_result = await embedding_service.process_file(
+        library_id=library_id,
+        filename=filename,
+        text=extract_result.text,
+        tenant_id=tenant_id,
+        user_id=user_id
+    )
+    
+    return {
+        "filename": filename,
+        "status": "success" if process_result.get('success') else "failed",
+        "chunk_count": process_result.get('chunk_count', 0),
+        "success": process_result.get('success', False)
+    }
+
+
 # エンベディング管理エンドポイント
 @router.post("/libraries/{library_id}/embeddings")
 async def start_embeddings(
@@ -336,13 +380,67 @@ async def start_embeddings(
     user_id: str = "default_user"
 ):
     """ライブラリ全体のエンベディングを開始"""
-    # TODO: 実際のエンベディング処理を実装
-    return {
-        "job_id": f"job_{library_id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
-        "status": "pending",
-        "message": "Embedding job started",
-        "library_id": library_id
-    }
+    try:
+        # ライブラリ詳細を取得
+        library = await library_service.get_library(library_id, tenant_id, user_id)
+        if not library:
+            raise HTTPException(status_code=404, detail="Library not found")
+        
+        results = []
+        files = library.get('files', [])
+        
+        # 各ファイルに対してエンベディング処理を実行
+        for file_info in files:
+            filename = file_info['filename']
+            
+            # 強制更新またはエンベディングが存在しない場合のみ処理
+            if request.force_update or file_info.get('embedding_status') != 'completed':
+                # ファイルコンテンツを取得
+                file_data = await library_service.get_file(
+                    library_id=library_id,
+                    filename=filename,
+                    tenant_id=tenant_id,
+                    user_id=user_id
+                )
+                
+                if file_data:
+                    # 共通処理を呼び出し
+                    result = await _process_file_embedding(
+                        library_id=library_id,
+                        filename=filename,
+                        file_data=file_data,
+                        tenant_id=tenant_id,
+                        user_id=user_id
+                    )
+                    results.append(result)
+                else:
+                    results.append({
+                        "filename": filename,
+                        "status": "failed",
+                        "reason": "File not found"
+                    })
+            else:
+                results.append({
+                    "filename": filename,
+                    "status": "skipped",
+                    "reason": "Already embedded"
+                })
+        
+        return {
+            "library_id": library_id,
+            "status": "completed",
+            "message": "Embedding processing completed",
+            "results": results,
+            "processed_files": len([r for r in results if r['status'] == 'success']),
+            "skipped_files": len([r for r in results if r['status'] == 'skipped']),
+            "failed_files": len([r for r in results if r['status'] == 'failed']),
+            "total_files": len(files)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/libraries/{library_id}/embeddings/status")
@@ -357,12 +455,20 @@ async def get_embedding_status(
         if not library:
             raise HTTPException(status_code=404, detail="Library not found")
         
+        # エンベディング情報を集計
+        from services.embedding_service import embedding_service
+        embeddings_by_file = await embedding_service.load_embeddings(library_id, tenant_id)
+        
+        total_chunks = sum(len(embs) for embs in embeddings_by_file.values())
+        embedded_files = len(embeddings_by_file)
+        
         return {
-            "status": library.get('embedding_status', 'idle'),
-            "total_chunks": 0,  # TODO: 実際のチャンク数を取得
-            "embedded_chunks": 0,  # TODO: 実際の処理済みチャンク数を取得
+            "status": "completed" if embedded_files > 0 else "idle",
+            "total_chunks": total_chunks,
+            "embedded_files": embedded_files,
+            "files_with_embeddings": list(embeddings_by_file.keys()),
             "last_updated": library.get('updated_at'),
-            "vector_count": library.get('vector_count', 0)
+            "vector_count": total_chunks
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -376,12 +482,42 @@ async def update_file_embeddings(
     user_id: str = "default_user"
 ):
     """特定ファイルのエンベディングを更新"""
-    # TODO: 実際のエンベディング更新処理を実装
-    return {
-        "message": "File embedding update started",
-        "filename": filename,
-        "library_id": library_id
-    }
+    try:
+        # ファイルコンテンツを取得
+        file_data = await library_service.get_file(
+            library_id=library_id,
+            filename=filename,
+            tenant_id=tenant_id,
+            user_id=user_id
+        )
+        
+        if not file_data:
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        # 共通処理を呼び出し
+        result = await _process_file_embedding(
+            library_id=library_id,
+            filename=filename,
+            file_data=file_data,
+            tenant_id=tenant_id,
+            user_id=user_id
+        )
+        
+        if result['status'] == 'failed':
+            raise HTTPException(status_code=400, detail=result.get('reason', 'Embedding processing failed'))
+        
+        return {
+            "message": "File embedding updated successfully",
+            "filename": filename,
+            "library_id": library_id,
+            "chunk_count": result.get('chunk_count', 0),
+            "success": result.get('success', False)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.delete("/libraries/{library_id}/files/{filename}/embeddings")
@@ -392,12 +528,34 @@ async def delete_file_embeddings(
     user_id: str = "default_user"
 ):
     """特定ファイルのエンベディングを削除"""
-    # TODO: 実際のエンベディング削除処理を実装
-    return {
-        "message": "File embeddings deleted",
-        "filename": filename,
-        "library_id": library_id
-    }
+    try:
+        # エンベディングファイルを削除
+        from services.storage_service import storage_service
+        from services.kvm_service import kvm_service
+        
+        # ストレージから削除
+        storage_key = f"{tenant_id}/library/{library_id}/embeddings/{filename}.json"
+        await storage_service.delete_object(storage_key)
+        
+        # KVMのステータスを更新
+        pk = f"TENANT#{tenant_id}#USER#{user_id}"
+        sk = f"LIBRARY#{library_id}#FILE#{filename}"
+        
+        await kvm_service.update_item(pk, sk, {
+            "embedding_status": "deleted",
+            "chunk_count": 0,
+            "embedded_at": None,
+            "updated_at": datetime.utcnow().isoformat()
+        })
+        
+        return {
+            "message": "File embeddings deleted successfully",
+            "filename": filename,
+            "library_id": library_id
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/libraries/{library_id}/search")
@@ -408,19 +566,48 @@ async def search_library(
     user_id: str = "default_user"
 ):
     """ライブラリ内をベクトル検索（RAG用）"""
-    # TODO: 実際のベクトル検索処理を実装
-    return {
-        "results": [
-            {
-                "filename": "sample.pdf",
-                "chunk": "This is a sample text chunk that matches the query.",
-                "score": 0.95,
+    try:
+        # ライブラリの存在確認
+        library = await library_service.get_library(library_id, tenant_id, user_id)
+        if not library:
+            raise HTTPException(status_code=404, detail="Library not found")
+        
+        # エンベディングサービスで検索
+        from services.embedding_service import embedding_service
+        
+        search_results = await embedding_service.search(
+            library_id=library_id,
+            query=request.query,
+            top_k=request.top_k,
+            threshold=request.threshold,
+            tenant_id=tenant_id
+        )
+        
+        # 結果を整形
+        results = []
+        for result in search_results:
+            results.append({
+                "filename": result.filename,
+                "chunk": result.text,
+                "score": result.score,
                 "metadata": {
-                    "page": 1,
-                    "position": 0
+                    "chunk_id": result.chunk_id,
+                    "chunk_index": result.metadata.get('chunk_index', 0),
+                    "start_position": result.metadata.get('start_position', 0),
+                    "end_position": result.metadata.get('end_position', 0)
                 }
-            }
-        ],
-        "query": request.query,
-        "library_id": library_id
-    }
+            })
+        
+        return {
+            "results": results,
+            "query": request.query,
+            "library_id": library_id,
+            "result_count": len(results),
+            "top_k": request.top_k,
+            "threshold": request.threshold
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
